@@ -1,0 +1,52 @@
+version: '3.8'
+
+networks:
+  my_network:
+    driver: bridge
+
+services:
+  kafka:
+    container_name: kafka
+    image: kafka:3.8.0
+    build: 
+      context: ./kafka
+    ports:
+        - "9092:9092"
+    networks:
+      - my_network
+    volumes:
+    - ./kafka/config/server.properties:/kafka/config/server.properties
+    - ./data/kafka/:/data/kafka/  
+
+  postgresql:
+    image: 'postgres:15-bullseye'
+    environment:
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypassword
+      POSTGRES_DB: mydatabase
+    ports:
+      - '5432:5432'
+    networks:
+      - my_network
+
+  apicurio-registry-kafkasql:
+    image: apicurio/apicurio-registry-kafkasql:2.6.5.Final
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9091
+      REGISTRY_FEATURES_GROUPS_ENABLED: "true"
+    ports:
+      - "8080:8080"
+    depends_on:
+      - kafka
+    networks:
+      - my_network
+
+  apicurio-registry-ui:
+    image: apicurio/apicurio-studio-ui:0.2.62.Final-announce
+    ports:
+      - "8081:8081"
+    depends_on:
+      - apicurio-registry-kafkasql
+    networks:
+      - my_network
+      
